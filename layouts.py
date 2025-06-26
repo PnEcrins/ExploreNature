@@ -8,11 +8,7 @@ def card(title, nb, id):
             dbc.CardBody(
                 [
                     html.H5(title, className="card-title"),
-                    html.H2(
-                        nb,
-                        className="card-text",
-                        id=id
-                    ),
+                    html.H2(nb, className="card-text", id=id),
                 ],
                 className="text-center",
             ),

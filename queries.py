@@ -20,10 +20,11 @@ def connect():
     return conn, cursor
 
 
-def filter_by_column(sql, column, filter, parameters= {}):
+def filter_by_column(sql, column, filter, parameters={}):
     sql += f" AND {column} = %({column})s "
     parameters[column] = filter
     return sql, parameters
+
 
 def get_total_obs(column=None, filter=None):
     conn, cursor = connect()
@@ -36,7 +37,7 @@ def get_total_obs(column=None, filter=None):
     """
     parameters = {"event_id_dataset": EVENT_ID_DATASET}
     if column and filter:
-        sql, parameters = filter_by_column(sql,column, filter, parameters)
+        sql, parameters = filter_by_column(sql, column, filter, parameters)
     cursor.execute(sql, parameters)
     data = cursor.fetchone()
 
@@ -131,7 +132,7 @@ def get_species_in_event(column=None, filter=None):
         GROUP BY lb_nom, cd_ref, group2_inpn, regne, ordre, famille
         order by nb_obs DESC
     """
-    parameters =  {"id_explore": EVENT_ID_DATASET}
+    parameters = {"id_explore": EVENT_ID_DATASET}
     if filter:
         sql, parameters = filter_by_column(sql, column, filter, parameters)
     sql += end_sql
@@ -145,7 +146,6 @@ def get_species_in_event(column=None, filter=None):
     return [dict(d) for d in data]
 
 
-
 def get_group2_inpn():
     conn, cursor = connect()
 
@@ -156,13 +156,14 @@ def get_group2_inpn():
         where id_dataset=%(id_explore)s
         order by group2_inpn ASC
     """
-    cursor.execute(sql, {"id_explore": EVENT_ID_DATASET} )
+    cursor.execute(sql, {"id_explore": EVENT_ID_DATASET})
     data = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
     return [d[0] for d in data]
+
 
 def get_ordres():
     conn, cursor = connect()
@@ -174,7 +175,26 @@ def get_ordres():
         where id_dataset=%(id_explore)s
         order by ordre ASC
     """
-    cursor.execute(sql, {"id_explore": EVENT_ID_DATASET} )
+    cursor.execute(sql, {"id_explore": EVENT_ID_DATASET})
+    data = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return [d[0] for d in data]
+
+
+def get_familles():
+    conn, cursor = connect()
+
+    sql = """
+        SELECT distinct famille
+        FROM taxonomie.taxref
+        JOIN gn_synthese.synthese USING(cd_nom)
+        where id_dataset=%(id_explore)s
+        order by famille ASC
+    """
+    cursor.execute(sql, {"id_explore": EVENT_ID_DATASET})
     data = cursor.fetchall()
 
     cursor.close()
