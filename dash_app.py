@@ -1,6 +1,10 @@
 from typing import List
 from dash import Dash, html, dcc, callback, Output, Input, dash_table
 import dash_bootstrap_components as dbc
+import dash_leaflet as dl
+import dash_leaflet.express as dlx
+from dash_extensions.javascript import assign
+
 
 import plotly.express as px
 
@@ -17,7 +21,10 @@ from queries import (
     get_group2_inpn,
     get_ordres,
     get_familles,
+    get_observers,
+    get_communal_limit,
 )
+from utils import format_columns, pointToLayer
 
 
 # TODO : nombre d'espèce total observé
@@ -28,17 +35,32 @@ from queries import (
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 
-
 # observations
-obs_df = pd.DataFrame.from_dict(get_all_data_geo())
-map = px.density_map(
-    lat=obs_df.latitude,
-    lon=obs_df.longitude,
-    z=obs_df.nb,
-    radius=10,
-    map_style="satellite",
-    height=800,
-)
+observation_geom = get_all_data_geo()
+limit_commune = get_communal_limit()
+# obs_df = pd.DataFrame.from_dict(get_all_data_geo())
+# map = px.density_map(
+#     lat=obs_df.latitude,
+#     lon=obs_df.longitude,
+#     z=obs_df.nb,
+#     radius=10,
+#     # map_style="carto-voyager",
+#     height=800,
+#     center=dict(lat=45.04, lon=5.95), zoom=12,
+# )
+
+# map.update_layout(
+#     map_layers= [
+#         {
+#             "below": 'traces',
+#             "sourcetype": "raster",
+#             "sourceattribution": "IGN",
+#             "source": [
+#                 "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&FORMAT=image/png"
+#             ]
+#         }
+#     ],
+# )
 
 ######################
 ##### GLOBAL vars ####
@@ -47,7 +69,6 @@ map = px.density_map(
 # Species in event
 g_species_in_event = get_species_in_event()
 species_in_event_df = pd.DataFrame.from_dict(g_species_in_event)
-
 species_event_chart = px.pie(
     species_in_event_df,
     names="group2_inpn",
@@ -78,9 +99,10 @@ new_species_chart = px.pie(
     hole=0.3,
 )
 
+# observer in dataset
+observers = get_observers()
 
 
-# print(new_species_chart)
 app.layout = dbc.Container(
     [
         html.H1(children="Explor'Nature 2025", style={"textAlign": "center"}),
@@ -133,70 +155,126 @@ app.layout = dbc.Container(
                 html.H2(children="Taxons observés pendant l'évenement"),
                 html.Div(id="my-output"),
                 html.Div(
-                    className="row mt-3",
+            className="d-flex justify-content-center",
                     children=[
                         html.Div(
                             dash_table.DataTable(
                                 data=[],
-                                page_size=20,
+                                columns=format_columns(g_species_in_event),
+                                page_size=15,
                                 sort_action="native",
                                 id="datable_species",
+                                markdown_options={"html": True},
+                                style_cell={"textAlign": "left"},
                             ),
-                            className="col-6",
                         ),
+                    ],
+                ),
+                html.Div(
+                    className="d-flex justify-content-center",
+                    children=[
                         html.Div(
                             dcc.Graph(
                                 figure=species_event_chart,
                                 style={"width": "70vh", "height": "50vh"},
                             ),
-                            className="col-6",
                         ),
                     ],
                 ),
             ]
         ),
         # NOUVELLE ESPECE COMMUNE
-        html.H2(
-            children="Nouveaux taxons sur la commune"
-        ),
+        html.H2(children="Nouveaux taxons sur la commune"),
         html.Div(
-            className="row mt-3",
+            className="d-flex justify-content-center",
             children=[
                 html.Div(
-                    dash_table.DataTable(data=[], page_size=20, sort_action="native",  id="datable_new_species_commune"),
-                    className="col-6",
+                    dash_table.DataTable(
+                        data=[],
+                        columns=format_columns(g_new_species_commune),
+                        page_size=15,
+                        sort_action="native",
+                        id="datable_new_species_commune",
+                        markdown_options={"html": True},
+                        style_cell={"textAlign": "left"},
+                    ),
                 ),
+            ],
+        ),
+        html.Div(
+            className="d-flex justify-content-center",
+            children=[
                 html.Div(
                     dcc.Graph(
                         figure=new_species_commune_chart,
                         style={"width": "70vh", "height": "50vh"},
                     ),
-                    className="col-6",
                 ),
             ],
         ),
         # NOUVELLE ESPECE PNE
         html.H2(children="Nouveaux taxons pour le PNE"),
         html.Div(
-            className="row mt-3",
+            className="d-flex justify-content-center",
             children=[
                 html.Div(
                     dash_table.DataTable(
-                        data=[], page_size=20, sort_action="native", id="new_species_in_structure"
+                        data=[],
+                        columns=format_columns(g_new_species),
+                        page_size=15,
+                        sort_action="native",
+                        id="new_species_in_structure",
+                        markdown_options={"html": True},
+                        style_cell={"textAlign": "left"},
                     ),
-                    className="col-6",
                 ),
+            ],
+        ),
+        html.Div(
+            className="d-flex justify-content-center",
+            children=[
                 html.Div(
                     dcc.Graph(
                         figure=new_species_chart,
                         style={"width": "70vh", "height": "50vh"},
                     ),
-                    className="col-6",
                 ),
             ],
         ),
+        dbc.Container(
+            [
+                html.H2(children=f"Observations durant l'évenement"),
+                dl.Map(
+                    children=[
+                        dl.TileLayer(
+                            url="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&FORMAT=image/png",
+                            attribution="&copy; IGN ",
+                        ),
+                        dl.GeoJSON(data=limit_commune),
+                        dl.GeoJSON(
+                            data=observation_geom, pointToLayer=assign(pointToLayer)
+                        ),
+                    ],
+                    center=[45.04, 5.95],
+                    zoom=13,
+                    style={"height": "80vh"},
+                    className="mb-4",
+                ),
+            ]
+        ),
+        html.H2(children=f"{len(observers)} observateurs au total pendant l'évenement"),
+        html.Div(
+            dash_table.DataTable(
+                data=observers,
+                page_size=15,
+                sort_action="native",
+                id="observers",
+                style_cell={"textAlign": "left"},
+            ),
+            className="col-6 mb-4",
+        ),
         # MAP
-        dcc.Graph(figure=map),
+        # dcc.Graph(figure=map),
     ],
     fluid=True,
 )
@@ -213,11 +291,8 @@ def filter_df(df: pd.DataFrame, column: str, value: str) -> List:
 
 def on_update(column, value):
     if value:
-        # species_in_event = get_species_in_event(column="group2_inpn", filter=value)
         filter_species_in_event = filter_df(species_in_event_df, column, value)
-        filter_new_species_commune = filter_df(
-            new_species_df, column, value
-        )
+        filter_new_species_commune = filter_df(new_species_df, column, value)
         filter_new_species_struct = filter_df(new_species_df, column, value)
         return (
             get_total_obs(column=column, filter=value),
@@ -226,7 +301,7 @@ def on_update(column, value):
             len(filter_new_species_commune),
             filter_new_species_commune,
             len(filter_new_species_struct),
-            filter_new_species_struct
+            filter_new_species_struct,
         )
     else:
         return (
@@ -236,22 +311,25 @@ def on_update(column, value):
             len(new_species_commune_df),
             g_new_species_commune,
             len(g_new_species),
-            g_new_species
+            g_new_species,
         )
 
+
 @callback(
-[    Output(component_id="nb_data", component_property="children"),
-    Output(component_id="nb_species", component_property="children"),
-    Output("datable_species", "data"),
-    Output("nb_new_species_commune", "children"),
-    Output("datable_new_species_commune", "data"),
-    Output("nb_new_species_pne", "children"),
-    Output("new_species_in_structure", "data")],
+    [
+        Output(component_id="nb_data", component_property="children"),
+        Output(component_id="nb_species", component_property="children"),
+        Output("datable_species", "data"),
+        Output("nb_new_species_commune", "children"),
+        Output("datable_new_species_commune", "data"),
+        Output("nb_new_species_pne", "children"),
+        Output("new_species_in_structure", "data"),
+    ],
     [
         Input("group2-dropdown", "value"),
         Input("ordre-dropdown", "value"),
         Input("famille-dropdown", "value"),
-    ]
+    ],
 )
 def update_output_div(group2, ordre, famille):
     if famille:
@@ -262,8 +340,6 @@ def update_output_div(group2, ordre, famille):
         return on_update("group2_inpn", group2)
     else:
         return on_update(None, None)
-
-
 
 
 if __name__ == "__main__":
