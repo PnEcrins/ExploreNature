@@ -25,6 +25,7 @@ from queries import (
     get_communal_limit,
 )
 from utils import format_columns, pointToLayer
+from config import *
 
 
 # TODO : nombre d'espèce total observé
@@ -38,29 +39,7 @@ app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 # observations
 observation_geom = get_all_data_geo()
 limit_commune = get_communal_limit()
-# obs_df = pd.DataFrame.from_dict(get_all_data_geo())
-# map = px.density_map(
-#     lat=obs_df.latitude,
-#     lon=obs_df.longitude,
-#     z=obs_df.nb,
-#     radius=10,
-#     # map_style="carto-voyager",
-#     height=800,
-#     center=dict(lat=45.04, lon=5.95), zoom=12,
-# )
 
-# map.update_layout(
-#     map_layers= [
-#         {
-#             "below": 'traces',
-#             "sourcetype": "raster",
-#             "sourceattribution": "IGN",
-#             "source": [
-#                 "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&FORMAT=image/png"
-#             ]
-#         }
-#     ],
-# )
 
 ######################
 ##### GLOBAL vars ####
@@ -105,7 +84,7 @@ observers = get_observers()
 
 app.layout = dbc.Container(
     [
-        html.H1(children="Explor'Nature 2025", style={"textAlign": "center"}),
+        html.H1(children=EVENT_TITLE, style={"textAlign": "center"}),
         html.Div(
             [
                 dcc.Dropdown(
@@ -143,7 +122,7 @@ app.layout = dbc.Container(
                     id="nb_new_species_commune",
                 ),
                 card(
-                    "Nouvelles espèces pour le PNE",
+                    "Nouvelles espèces pour le Parc",
                     "",
                     id="nb_new_species_pne",
                 ),
@@ -212,8 +191,8 @@ app.layout = dbc.Container(
                 ),
             ],
         ),
-        # NOUVELLE ESPECE PNE
-        html.H2(children="Nouveaux taxons pour le PNE"),
+        # NOUVELLE ESPECE Parc
+        html.H2(children="Nouveaux taxons pour le Parc"),
         html.Div(
             className="d-flex justify-content-center",
             children=[
