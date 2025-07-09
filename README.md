@@ -2,9 +2,9 @@ Tableau de bord GeoNature avec Dash
 ===================================
 
 Cette application permet de générer un tableau de bord de données en se connectant à une base de données GeoNature.
-Il a été utilisé pour réstituer les données lors d'un évenement naturaliste : Explor'Nature.
+Il a été utilisé pour restituer en continu et en temps réel les données lors d'un évenement naturaliste : Explor'Nature.
 
-Il affiche les données d'un jeu de données et d'une commune (configurable dans le fichier `config.py`) avec les éléments suivants :
+Il affiche les données d'un jeu de données et d'un zonage géographique comme une commune ou autre (configurable dans le fichier `config.py`) avec les éléments suivants :
 
 - tableau des espèces
 - tableau des nouvelles espèces pour la commune
@@ -13,6 +13,8 @@ Il affiche les données d'un jeu de données et d'une commune (configurable dans
 - carte de chaleurs de données
 
 Tous les éléments sont filtrables par groupe2 INPN, ordre et famille.
+
+![Aperçu](docs/GeoNature-event-dash-preview.jpg)
 
 Installation et lancement
 =========================
